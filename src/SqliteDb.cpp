@@ -1,4 +1,4 @@
-#include "../sqlite/sqlite3.h"
+#include <sqlite3.h>
 #include <SqliteDb.hpp>
 #include <SqliteStatement.hpp>
 #include <format>
@@ -29,11 +29,12 @@ namespace sdb {
 
     int result = sqlite3_open_v2(filename.string().c_str(), &rawDb, flags, nullptr);
 
+    SqliteConnectionPtr connection(rawDb);
+
     if (result != SQLITE_OK) {
-      throw SqliteDbException("Failed to open database: " + std::string(sqlite3_errmsg(rawDb)));
+      throw SqliteDbException("Failed to open database: " + std::string(sqlite3_errmsg(rawDb)), result);
     }
 
-    SqliteConnectionPtr connection(rawDb);
     auto db = std::unique_ptr<SqliteDb>(new SqliteDb(std::move(connection)));
 
     return db;
@@ -103,7 +104,8 @@ namespace sdb {
     int result = sqlite3_prepare_v2(mConnection.get(), sql.c_str(), -1, &rawStmt, nullptr);
 
     if (result != SQLITE_OK) {
-      throw SqliteDbException("Failed to prepare statement: " + std::string(sqlite3_errmsg(mConnection.get())));
+      throw SqliteDbException(
+          "Failed to prepare statement: " + std::string(sqlite3_errmsg(mConnection.get())), result);
     }
 
     return SqliteStatement(SqliteStatementPtr(rawStmt));
@@ -125,7 +127,7 @@ namespace sdb {
       } else {
         error = getErrorMessage();
       }
-      throw SqliteDbException("SQL execution error: " + error);
+      throw SqliteDbException("SQL execution error: " + error, rc);
     }
   }
 
@@ -138,8 +140,10 @@ namespace sdb {
   }
 
   void SqliteDb::setJournalMode(JournalMode mode) {
-    static auto toString = [](JournalMode m) {
+    static auto toString = [](JournalMode m) -> const char* {
       switch (m) {
+        case JournalMode::DEL:
+          return "DELETE";
         case JournalMode::TRUNCATE:
           return "TRUNCATE";
         case JournalMode::PERSIST:
@@ -150,55 +154,49 @@ namespace sdb {
           return "WAL";
         case JournalMode::OFF:
           return "OFF";
-        default:
-          return "DELETE";
       }
+      throw SqliteDbException("Unknown journal mode");
     };
 
     execute(std::format("PRAGMA journal_mode = {}", toString(mode)));
   }
 
   void SqliteDb::setSynchronous(Synchronous sync) {
-    static auto toString = [](Synchronous s) {
+    static auto toString = [](Synchronous s) -> const char* {
       switch (s) {
-        case Synchronous::EXTRA:
-          return "EXTRA";
-        case Synchronous::NORMAL:
-          return "NORMAL";
         case Synchronous::OFF:
           return "OFF";
-        default:
+        case Synchronous::NORMAL:
+          return "NORMAL";
+        case Synchronous::FULL:
           return "FULL";
+        case Synchronous::EXTRA:
+          return "EXTRA";
       }
+      throw SqliteDbException("Unknown synchronous mode");
     };
 
     execute(std::format("PRAGMA synchronous = {}", toString(sync)));
   }
 
   void SqliteDb::setTempStore(TempStore store) {
-    static auto toString = [](TempStore t) {
+    static auto toString = [](TempStore t) -> const char* {
       switch (t) {
+        case TempStore::DEFAULT:
+          return "DEFAULT";
         case TempStore::FILE:
           return "FILE";
         case TempStore::MEMORY:
           return "MEMORY";
-        default:
-          return "DEFAULT";
       }
+      throw SqliteDbException("Unknown temp store mode");
     };
 
     execute(std::format("PRAGMA temp_store = {}", toString(store)));
   }
 
   void SqliteDb::setCacheSize(std::size_t sizeKb) {
-    constexpr std::size_t MIN_CACHE_KB = 0;
     constexpr std::size_t MAX_CACHE_KB = 2000000;
-
-    if (sizeKb < MIN_CACHE_KB) {
-      throw std::invalid_argument(
-          "Cache size too small: " + std::to_string(sizeKb) + " KB (minimum: " + std::to_string(MIN_CACHE_KB)
-              + " KB)");
-    }
 
     if (sizeKb > MAX_CACHE_KB) {
       throw std::invalid_argument(

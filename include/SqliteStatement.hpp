@@ -255,7 +255,7 @@ template<typename T>
 void SqliteStatement::bindParameter(int index, T&& value) {
     if constexpr (std::is_same_v<std::decay_t<T>, int>) {
         bind(index, value);
-    } else if constexpr (std::is_same_v<std::decay_t<T>, long long>) {
+    } else if constexpr (std::is_same_v<std::decay_t<T>, std::int64_t>) {
         bind(index, value);
     } else if constexpr (std::is_same_v<std::decay_t<T>, double>) {
         bind(index, value);
@@ -263,7 +263,7 @@ void SqliteStatement::bindParameter(int index, T&& value) {
         bind(index, value);
     } else if constexpr (std::is_same_v<std::decay_t<T>, const char*>) {
         bind(index, value);
-    } else if constexpr (std::is_same_v<std::decay_t<T>, const std::vector<std::byte>&>) {
+    } else if constexpr (std::is_same_v<std::decay_t<T>, std::vector<std::byte>>) {
         bind(index, value);
     } else if constexpr (std::is_same_v<std::decay_t<T>, std::nullptr_t>) {
         bindNull(index);

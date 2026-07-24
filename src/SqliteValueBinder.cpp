@@ -5,7 +5,7 @@ namespace sdb {
   SqliteValueBinder::SqliteValueBinder(SqliteStatement& stmt)
     : mStmt(stmt) {}
 
-  void SqliteValueBinder::SqliteValueBinder::bind(int index, const SqliteValue& value) {
+  void SqliteValueBinder::bind(int index, const SqliteValue& value) {
     std::visit([this, index](const auto& v) {
       using T = std::decay_t<decltype(v)>;
       if constexpr (std::is_same_v<T, std::monostate>) {

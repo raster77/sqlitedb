@@ -1,7 +1,8 @@
 #ifndef INCLUDE_SQLITETYPES_HPP_
 #define INCLUDE_SQLITETYPES_HPP_
 
-#include "../sqlite/sqlite3.h"
+#include <sqlite3.h>
+#include <cstdint>
 #include <string>
 #include <memory>
 #include <vector>
@@ -14,7 +15,7 @@ namespace sdb {
   };
 
   enum class JournalMode {
-    DELETE, TRUNCATE, PERSIST, MEMORY, WAL, OFF
+    DEL, TRUNCATE, PERSIST, MEMORY, WAL, OFF
   };
 
   enum class Synchronous {

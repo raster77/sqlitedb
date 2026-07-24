@@ -5,7 +5,7 @@ namespace sdb {
 
   SqliteTransaction::SqliteTransaction(SqliteDb& sqliteDb, Mode mode)
     : mSqliteDb(sqliteDb)
-    , mIntransaction (false) {
+    , mInTransaction(false) {
     if (!sqliteDb.isOpen()) {
       throw SqliteTransactionException("No database");
     }
@@ -19,14 +19,14 @@ namespace sdb {
     }();
 
     sqliteDb.execute(sql);
-    mIntransaction = true;
+    mInTransaction = true;
   }
 
   SqliteTransaction::~SqliteTransaction() {
-    if (mIntransaction) {
+    if (mInTransaction) {
       try {
         mSqliteDb.execute("ROLLBACK");
-        mIntransaction = false;
+        mInTransaction = false;
       } catch (...) {
         // Log error silently
       }
@@ -42,16 +42,16 @@ namespace sdb {
   }
 
   bool SqliteTransaction::inTransaction() const {
-    return mIntransaction;
+    return mInTransaction;
   }
 
   void SqliteTransaction::exec(const std::string& sql) {
-    if (mIntransaction) {
+    if (mInTransaction) {
       try {
         mSqliteDb.execute(sql);
-        mIntransaction = false;
+        mInTransaction = false;
       } catch (SqliteException& e) {
-        throw SqliteTransactionException(e.what());
+        throw SqliteTransactionException(e.what(), e.errorCode());
       }
     }
   }

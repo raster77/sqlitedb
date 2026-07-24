@@ -1,4 +1,4 @@
-#include "../sqlite/sqlite3.h"
+#include <sqlite3.h>
 #include <SqliteStatement.hpp>
 #include <SqliteException.hpp>
 #include <type_traits>
@@ -14,7 +14,7 @@ namespace sdb {
     checkParameterIndex(index);
     int result = sqlite3_bind_int(mStatement.get(), index, value);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind int at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind int at index " + std::to_string(index), result);
     }
   }
 
@@ -22,7 +22,7 @@ namespace sdb {
     checkParameterIndex(index);
     int result = sqlite3_bind_int64(mStatement.get(), index, value);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind int64 at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind int64 at index " + std::to_string(index), result);
     }
   }
 
@@ -30,7 +30,7 @@ namespace sdb {
     checkParameterIndex(index);
     int result = sqlite3_bind_double(mStatement.get(), index, value);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind double at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind double at index " + std::to_string(index), result);
     }
   }
 
@@ -38,7 +38,7 @@ namespace sdb {
     checkParameterIndex(index);
     int result = sqlite3_bind_text(mStatement.get(), index, value.c_str(), -1, SQLITE_TRANSIENT);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind text at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind text at index " + std::to_string(index), result);
     }
   }
 
@@ -46,7 +46,7 @@ namespace sdb {
     checkParameterIndex(index);
     int result = sqlite3_bind_text(mStatement.get(), index, value, -1, SQLITE_TRANSIENT);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind text at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind text at index " + std::to_string(index), result);
     }
   }
 
@@ -55,7 +55,7 @@ namespace sdb {
     int result = sqlite3_bind_blob(mStatement.get(), index, blob.data(),
                                    static_cast<int>(blob.size()), SQLITE_TRANSIENT);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind text at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind blob at index " + std::to_string(index), result);
     }
   }
 
@@ -63,7 +63,7 @@ namespace sdb {
     checkParameterIndex(index);
     int result = sqlite3_bind_null(mStatement.get(), index);
     if (result != SQLITE_OK) {
-      throw SqliteStatementException("Failed to bind null at index " + std::to_string(index));
+      throw SqliteStatementException("Failed to bind null at index " + std::to_string(index), result);
     }
   }
 
@@ -93,8 +93,8 @@ namespace sdb {
 
   std::vector<std::byte> SqliteStatement::getBlob(int column) const {
     checkColumnIndex(column);
-    int size = sqlite3_column_bytes(mStatement.get(), column);
     const std::byte* data = reinterpret_cast<const std::byte*>(sqlite3_column_blob(mStatement.get(), column));
+    int size = sqlite3_column_bytes(mStatement.get(), column);
     return std::vector<std::byte>(data, data + size);
   }
 
@@ -131,7 +131,8 @@ namespace sdb {
     int columnCount = getColumnCount();
     if (column < 0 || column >= columnCount) {
       throw SqliteStatementException(
-          "Column index " + std::to_string(column) + " out of range [0, " + std::to_string(columnCount - 1) + "]");
+          "Column index " + std::to_string(column) + " out of range [0, " + std::to_string(columnCount - 1) + "]",
+          SQLITE_RANGE);
     }
   }
 
@@ -177,7 +178,7 @@ namespace sdb {
     } else if (result == SQLITE_DONE) {
       return false;
     } else {
-      throw SqliteStatementException("Step failed with error code: " + std::to_string(result));
+      throw SqliteStatementException("Step failed with error code: " + std::to_string(result), result);
     }
   }
 
@@ -191,13 +192,14 @@ namespace sdb {
 
   void SqliteStatement::checkParameterIndex(int index) const {
     if (index < 1) {
-      throw SqliteStatementException("Parameter index must be >= 1, got " + std::to_string(index));
+      throw SqliteStatementException("Parameter index must be >= 1, got " + std::to_string(index), SQLITE_RANGE);
     }
 
     int paramCount = getParameterCount();
     if (index > paramCount) {
       throw SqliteStatementException(
-          "Parameter index " + std::to_string(index) + " out of range [1, " + std::to_string(paramCount) + "]");
+          "Parameter index " + std::to_string(index) + " out of range [1, " + std::to_string(paramCount) + "]",
+          SQLITE_RANGE);
     }
   }
 

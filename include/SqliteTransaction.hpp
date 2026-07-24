@@ -15,11 +15,17 @@ namespace sdb {
  *
  * Example usage:
  * @code
- *   sdb::SqliteDb db("file:example.db?mode=rwc");
- *   sdb::SqliteTransaction trans(db);
+ *   auto db = sdb::SqliteDb::open("file:example.db?mode=rwc");
+ *   sdb::SqliteTransaction trans(*db);
  *   // ... perform queries
  *   trans.commit(); // Persist changes
  * @endcode
+ *
+ * @warning The `SqliteDb` passed to the constructor must outlive this
+ *   object. `SqliteTransaction` only keeps a reference to it; destroying
+ *   or closing the database while a `SqliteTransaction` is still alive
+ *   results in undefined behavior (the destructor/rollback would access
+ *   a dangling reference).
  */
 class SqliteTransaction {
     public:
@@ -79,7 +85,7 @@ class SqliteTransaction {
 
     private:
       SqliteDb& mSqliteDb;
-      bool mIntransaction;
+      bool mInTransaction;
       void exec(const std::string& sql);
   };
 

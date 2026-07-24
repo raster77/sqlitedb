@@ -156,8 +156,6 @@ namespace sdb {
 
       explicit SqliteDb(SqliteConnectionPtr connection);
       void checkConnection() const;
-
-      friend class SqliteTransaction;
   };
 
   template<std::ranges::input_range Range>
